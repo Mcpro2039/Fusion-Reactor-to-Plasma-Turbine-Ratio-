@@ -14,7 +14,7 @@ class Reactor_recipe:
     def __init__(self, Plasma_type1, Plasma_type1_output,
                  Reactor_Input1, Reactor_input1_amount,
                  Reactor_input2, Reactor_input2_amount,
-                 Reactor_duration, Reactor_total_eu, Reactor_eu_usage_per_tick):
+                 Reactor_duration, Reactor_total_eu, Reactor_eu_usage_per_tick, Reactor_recipe_voltage_tier):
         
         self.base_output_amount = Plasma_type1_output
         self.base_input1_amount = Reactor_input1_amount
@@ -22,6 +22,7 @@ class Reactor_recipe:
         self.Reactor_duration = Reactor_duration
         self.Reactor_total_eu = Reactor_total_eu
         self.Reactor_eu_usage_per_tick = Reactor_eu_usage_per_tick
+        self.Reactor_recipe_voltage_tier = Reactor_recipe_voltage_tier
 
         self.Reactor_output = Plasma_type1
         self.Reactor_input1 = Reactor_Input1
@@ -119,18 +120,38 @@ class PlasmaTurbineCalculator:
                 / self.Recipe_time()))
             )
         )
+    
+def voltage_tiers(Tier_name, value):
+    return Tier_name, value
+
+#Voltage tiers... 
+Volatage_Tiers = [
+    voltage_tiers("Ulv", 1),
+    voltage_tiers("Lv", 2),
+    voltage_tiers("Mv", 3),
+    voltage_tiers("Hv", 4),
+    voltage_tiers("Ev", 5),
+    voltage_tiers("Iv", 6),
+    voltage_tiers("LuV", 7),
+    voltage_tiers("Zpm", 8),
+    voltage_tiers("Uv", 9),
+    voltage_tiers("UHV", 10),
+    voltage_tiers("UEV", 11),
+    voltage_tiers("UIV", 12),
+
+]
 
 #Fusion Reactor recipes are Plasma output, Plasma output amount, Reactor input 1, Reactor input 1 amount, Reactor input 2, Reactor input 2 amount, Duration, Total EU, EU per tick
 Fusion_reactor_Recipes = [
-    Reactor_recipe("Nickel Plasma", 144, "Liquid Potassium", 144, "Fluorine Gas", 1000, 7.2, 4423680, 30720),
-    Reactor_recipe("Helium Plasma", 1000, "Deuterium Gas", 1000, "Tritium Gas", 1000, 4, 589824, 4096),
-    Reactor_recipe("Tin Plasma", 144, "Liquid Silver", 144, "Helium 3", 1500, 8.4, 3538944, 24576),
-    Reactor_recipe("Nitrogen Plasma", 100, "Liquid Beryllium", 144, "Deuterium Gas", 3000, 7.2, 2359296, 16384),
-    Reactor_recipe("Oxygen Plasma", 1000, "Liquid Carbon", 144, "Helium 3", 1000, 12.8, 1048576, 4096),
-    Reactor_recipe("Iron Plasma", 144, "Liquid Silicon", 144, "Liquid Magnesium", 144, 10.8, 1658880, 7680),
-    Reactor_recipe("Argon Plasma", 1000, "Liquid Carbon", 144, "Liquid Manganese", 144, 7.2, 3533944, 24576),
-    Reactor_recipe("Americium Plasma", 144, "Liquid Plutonium 241", 144, "Hydrogen Gas", 1000, 15.6, 30670840, 98304),
-    Reactor_recipe("Magmatic Plasma", 144, "Infernal Concentrate", 500, "Iron Plasma", 288, 12.8, 17066496, 66666),
+    Reactor_recipe("Nickel Plasma", 144, "Liquid Potassium", 144, "Fluorine Gas", 1000, 7.2, 4423680, 30720, 7),
+    Reactor_recipe("Helium Plasma", 1000, "Deuterium Gas", 1000, "Tritium Gas", 1000, 4, 589824, 4096, 6),
+    Reactor_recipe("Tin Plasma", 144, "Liquid Silver", 144, "Helium 3", 1500, 8.4, 3538944, 24576, 7),
+    Reactor_recipe("Nitrogen Plasma", 100, "Liquid Beryllium", 144, "Deuterium Gas", 3000, 7.2, 2359296, 16384, 7),
+    Reactor_recipe("Oxygen Plasma", 1000, "Liquid Carbon", 144, "Helium 3", 1000, 12.8, 1048576, 4096, 6),
+    Reactor_recipe("Iron Plasma", 144, "Liquid Silicon", 144, "Liquid Magnesium", 144, 10.8, 1658880, 7680, 7),
+    Reactor_recipe("Argon Plasma", 1000, "Liquid Carbon", 144, "Liquid Manganese", 144, 7.2, 3533944, 24576, 7),
+    Reactor_recipe("Americium Plasma", 144, "Liquid Plutonium 241", 144, "Hydrogen Gas", 1000, 15.6, 30670840, 98304, 8),
+    Reactor_recipe("Magmatic Plasma", 144, "Infernal Concentrate", 500, "Iron Plasma", 288, 12.8, 17066496, 66666, 8),
 ]
 
 #Plasma Turbine recpies are Plasma input, Liquid output, Duration, Total EU, EU per tick
@@ -175,6 +196,10 @@ Tier_lookup = {t.Tier_name: t for t in Turbine_rotor_holder_tiers}
 
 def update_display(*_):
     reactors = reactor_amount.get()
+    overclock = Overclock_voltage.get()
+    
+    # Calculate overclock divisor (each level divides duration in half)
+    overclock_divisor = 2 ** overclock if overclock > 0 else 1
 
     rotor = Rotor_lookup[Turbine_rotor_box.get()]
     tier = Tier_lookup[Rotor_holder_box.get()]
@@ -184,6 +209,9 @@ def update_display(*_):
         r for r in Fusion_reactor_Recipes
         if r.Reactor_output == turbine_recipe.Plasma_type1
     )
+    
+    # Update voltage tier label
+    voltage_tier_label.config(text=f"Reactor Recipe Voltage Tier: {Volatage_Tiers[reactor_recipe.Reactor_recipe_voltage_tier - 1][0]}")
 
     calc = PlasmaTurbineCalculator(
         Rotor_efficiency=rotor.Rotor_efficiency,
@@ -193,7 +221,7 @@ def update_display(*_):
         Plasma_turbine_duration=turbine_recipe.Plasma_turbine_Duration,
         Reactor_output=reactor_recipe.base_output_amount * reactors,
         Liquid_type1_output=turbine_recipe.Liquid_type1_output,
-        Reactor_duration=reactor_recipe.Reactor_duration
+        Reactor_duration=reactor_recipe.Reactor_duration / overclock_divisor
     )
 
     #Reactor output display
@@ -221,6 +249,7 @@ def update_display(*_):
         f"Efficiency: {calc.efficiency():.5f} %\n"
         f"EU per Tick: {calc.eu_per_tick():.5f} EU/t\n"
         f"Total Eu per Tick: {calc.eu_per_tick() * R_to_T:.5f} EU\n"
+        f"Total Milliom Eu per tick: {(calc.eu_per_tick() * R_to_T)/1000000:.5f} M EU\n"
         f"Recipe Time: {calc.Recipe_time():.5f} s\n"
         f"Reactors → Turbine Ratio: {calc.Reactor_to_turbine_ratio():.5f}"
 
@@ -228,8 +257,9 @@ def update_display(*_):
     turbine_output_box.config(state="disabled")
 
 root = tk.Tk()
+
 root.title("Fusion Reactor To Plasma Turbine Ratio Calculator")
-root.geometry("1000x500")
+root.geometry("700x500")
 
 #Plasma turbine recipe selector
 Plasma_turbine_recipe_box = ttk.Combobox(
@@ -256,6 +286,8 @@ Turbine_rotor_box = ttk.Combobox(
 )
 
 reactor_amount = tk.IntVar(value=1)
+Overclock_voltage = tk.IntVar(value=1)
+
 tk.Label(root, text="Made By Minecrafrpro2039").place(x=0, y=0)
 tk.Label(root, text="Number of Reactors:").place(x=10, y=25)
 tk.Label(root, text="Plasma Turbine Recipes:").place(x=10, y=80)
@@ -283,6 +315,11 @@ Rotor_holder_box.place(x=10, y=170)
 Turbine_rotor_box.current(0)
 Turbine_rotor_box.bind("<<ComboboxSelected>>", update_display)
 Turbine_rotor_box.place(x=10, y=230)
+
+voltage_tier_label = tk.Label(root, text="Reactor Recipe Voltage Tier: N/A")
+voltage_tier_label.place(x=10, y=260)
+tk.Label(root, text= "If Reactor Reacipe is overclocked,\n increase the number in the\n spinbox below to decrease\n the Reactor recipe duration").place(x=10, y=280)
+tk.Spinbox(root, from_=0, to=12, textvariable=Overclock_voltage,command=update_display, width=10).place(x=10, y=350)
 
 
 
