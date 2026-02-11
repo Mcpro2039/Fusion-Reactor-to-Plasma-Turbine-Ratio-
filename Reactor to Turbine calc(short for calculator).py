@@ -175,6 +175,7 @@ Turbine_rotor = [
     Rotor("Dragonsteel Turbine Rotor", 380, 1100),
     Rotor("Prismalium Turbine Rotor", 470, 1600),
     Rotor("Melodium Turbine Rotor", 550, 2000),
+    Rotor("Stellarium Turbine Rotor", 660, 3200)
 ]
 
 #Rotor tiers are Name, Multiplier
